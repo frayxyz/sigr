@@ -43,6 +43,8 @@ def create_app(test_config=None):
     app.register_blueprint(menu_bp)
     from .reservas import bp as reservas_bp
     app.register_blueprint(reservas_bp)
+    from .pedidos import bp as pedidos_bp
+    app.register_blueprint(pedidos_bp)
 
     @app.get("/")
     def inicio():
