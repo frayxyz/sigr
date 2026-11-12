@@ -37,6 +37,9 @@ def create_app(test_config=None):
     with app.app_context():
         _crear_admin_inicial(app)
 
+    from .auth import bp as auth_bp
+    app.register_blueprint(auth_bp)
+
     @app.get("/")
     def inicio():
         return {"sistema": "SIGR", "version": VERSION, "documentacion": "README.md"}
