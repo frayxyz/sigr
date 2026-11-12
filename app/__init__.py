@@ -45,6 +45,8 @@ def create_app(test_config=None):
     app.register_blueprint(reservas_bp)
     from .pedidos import bp as pedidos_bp
     app.register_blueprint(pedidos_bp)
+    from .caja import bp as caja_bp
+    app.register_blueprint(caja_bp)
 
     @app.get("/")
     def inicio():
