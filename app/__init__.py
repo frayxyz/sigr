@@ -41,6 +41,8 @@ def create_app(test_config=None):
     app.register_blueprint(auth_bp)
     from .menu import bp as menu_bp
     app.register_blueprint(menu_bp)
+    from .reservas import bp as reservas_bp
+    app.register_blueprint(reservas_bp)
 
     @app.get("/")
     def inicio():
