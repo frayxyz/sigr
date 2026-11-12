@@ -17,7 +17,7 @@ Primera versión estable del código fuente. Esta es la línea base sobre la que
 - **Cierre de caja:** cierre diario que impide dejar pedidos abiertos y evita cierres duplicados.
 - **Reportes:** ventas por día y ranking de platos vendidos en un rango de fechas.
 - **Documentación técnica:** `README.md`, `CHANGELOG.md`, `LICENSE.txt` (MIT), esquema de base de datos y manual de despliegue.
-- **Pruebas de integración:** 24 casos con `unittest` que cubren autenticación, menú, pedidos, reservas, caja y reportes.
+- **Pruebas de integración:** 25 casos con `unittest` que cubren autenticación, menú, pedidos, reservas, caja y reportes.
 
 ### Notas de la línea base
 
