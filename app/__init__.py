@@ -38,15 +38,13 @@ def create_app(test_config=None):
         _crear_admin_inicial(app)
 
     from .auth import bp as auth_bp
-    app.register_blueprint(auth_bp)
-    from .menu import bp as menu_bp
-    app.register_blueprint(menu_bp)
-    from .reservas import bp as reservas_bp
-    app.register_blueprint(reservas_bp)
-    from .pedidos import bp as pedidos_bp
-    app.register_blueprint(pedidos_bp)
     from .caja import bp as caja_bp
-    app.register_blueprint(caja_bp)
+    from .menu import bp as menu_bp
+    from .pedidos import bp as pedidos_bp
+    from .reservas import bp as reservas_bp
+
+    for blueprint in (auth_bp, menu_bp, pedidos_bp, reservas_bp, caja_bp):
+        app.register_blueprint(blueprint)
 
     @app.get("/")
     def inicio():
