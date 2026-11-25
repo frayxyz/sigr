@@ -1,0 +1,122 @@
+# Pipeline de integración y entrega continua (CI/CD) del SIGR.
+#
+# Etapas:
+#   1. build-test   Compila el código y ejecuta las pruebas en Python 3.11 y 3.12.
+#   2. seguridad    Análisis estático (bandit) y de dependencias vulnerables (pip-audit).
+#   3. smoke        Levanta la aplicación y verifica disponibilidad y tiempo de respuesta.
+#   4. staging      Empaqueta la versión y la publica como artefacto (despliegue simulado).
+#
+# Un fallo en cualquier etapa detiene el pipeline; staging solo se ejecuta si todo lo anterior pasa.
+
+name: CI/CD SIGR
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    name: Construcción y pruebas (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Compilar el código
+        run: python -m compileall -q app run.py tests
+
+      - name: Ejecutar pruebas de integración
+        run: python -m unittest discover -s tests -v
+
+  seguridad:
+    name: Análisis de seguridad
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar herramientas de análisis
+        run: pip install bandit pip-audit
+
+      - name: Análisis estático del código (bandit, severidad media o superior)
+        run: bandit -r app run.py -ll
+
+      - name: Dependencias con vulnerabilidades conocidas (pip-audit)
+        run: pip-audit -r requirements.txt
+
+  smoke:
+    name: Prueba de humo y disponibilidad
+    needs: build-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Levantar la aplicación y verificar disponibilidad
+        run: |
+          python run.py > servidor.log 2>&1 &
+          listo=0
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:5000/api/salud; then listo=1; break; fi
+            sleep 1
+          done
+          if [ "$listo" -ne 1 ]; then
+            echo "La aplicación no respondió a tiempo"
+            cat servidor.log
+            exit 1
+          fi
+          tiempo=$(curl -o /dev/null -s -w "%{time_total}" http://127.0.0.1:5000/api/salud)
+          echo "Tiempo de respuesta de /api/salud: ${tiempo} s (umbral 0.5 s)"
+          python -c "import sys; sys.exit(0 if float('${tiempo}') < 0.5 else 1)"
+
+  staging:
+    name: Despliegue simulado a staging
+    needs: [build-test, seguridad, smoke]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Empaquetar la versión
+        run: |
+          mkdir -p paquete
+          cp -r app run.py requirements.txt README.md CHANGELOG.md LICENSE.txt paquete/
+          tar -czf sigr-${{ github.sha }}.tar.gz paquete
+          echo "Versión empaquetada: sigr-${{ github.sha }}.tar.gz"
+
+      - name: Publicar en staging (simulado)
+        run: |
+          echo "Despliegue simulado en el entorno de staging."
+          echo "Commit: ${{ github.sha }}"
+          echo "Rama: ${{ github.ref_name }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sigr-staging-${{ github.sha }}
+          path: sigr-${{ github.sha }}.tar.gz

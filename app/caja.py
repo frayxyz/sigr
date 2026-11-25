@@ -4,7 +4,6 @@ from datetime import date, datetime
 from flask import Blueprint, request
 
 from .db import get_db
-from .pedidos import ESTADOS_ABIERTOS
 from .seguridad import error, requiere_sesion, usuario_actual
 
 bp = Blueprint("caja", __name__, url_prefix="/api")
@@ -30,11 +29,11 @@ def cerrar_caja():
     if db.execute("SELECT 1 FROM cierres_caja WHERE fecha = ?", (fecha,)).fetchone():
         return error("La caja de esa fecha ya fue cerrada.", 409)
 
-    marcadores = ",".join("?" * len(ESTADOS_ABIERTOS))
+    # Consulta literal (sin construcción dinámica). Los estados abiertos son los de ESTADOS_ABIERTOS.
     abiertos = db.execute(
-        f"""SELECT COUNT(*) FROM pedidos
-            WHERE date(creado_en) = ? AND estado IN ({marcadores})""",
-        (fecha, *ESTADOS_ABIERTOS),
+        """SELECT COUNT(*) FROM pedidos
+           WHERE date(creado_en) = ? AND estado IN ('PENDIENTE', 'EN_PREPARACION', 'LISTO')""",
+        (fecha,),
     ).fetchone()[0]
     if abiertos:
         return error(f"Existen {abiertos} pedido(s) sin entregar o cancelar en esa fecha.", 409)
